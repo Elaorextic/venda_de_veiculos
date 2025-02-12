@@ -18,7 +18,7 @@ class Veiculo(models.Model):
     foto = models.ImageField()
 
     def __str__(self):
-        return self.modelo
+        return f'{self.modelo} R${self.preco}'
 
 class Vendedor(models.Model):
     nome = models.CharField(max_length=40)
@@ -30,24 +30,29 @@ class Vendedor(models.Model):
     class Meta:
         verbose_name='Vendedore'
 
-class Venda_Pendente(models.Model):
-    valor_total = models.FloatField()
+class Venda(models.Model):
     data_venda = models.DateTimeField()
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     veiculo = models.ForeignKey(Veiculo, on_delete=models.CASCADE)
     vendedor = models.ForeignKey(Vendedor, on_delete=models.CASCADE)
+    status = models.CharField(max_length=100, default='Pendente')
 
     def __str__(self):
-        return f" O veiculo com pagamento pendente e {self.veiculo} no total de R${self.valor_total} do vendedor {self.vendedor} para o cliente {self.cliente}"
+        return f"{self.veiculo} Status : {self.status}"
 
-    class Meta:
-        verbose_name='Vendas Pendente'
+class TipoPagamento(models.Model):
+    descricao = models.CharField(max_length=100)
+    desconto = models.CharField(max_length=100)
+
+    def __str__(self):
+        return f'{self.descricao}'
+
 
 class Pagamento(models.Model):
     valor = models.FloatField()
     data_pagamento = models.DateTimeField()
-    venda = models.ForeignKey(Venda_Pendente, on_delete=models.CASCADE)
-    tipo_pag = models.CharField(max_length=100)
+    venda = models.ForeignKey(Venda, on_delete=models.CASCADE)
+    tipo_pag = models.ForeignKey(TipoPagamento, on_delete=models.CASCADE)
 
     def __str__(self):
         return f"Venda concluida no valor de R${self.valor}"
