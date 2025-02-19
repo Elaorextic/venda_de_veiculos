@@ -50,6 +50,7 @@ class TipoPagamento(models.Model):
 
 class Pagamento(models.Model):
     valor = models.FloatField()
+    saldo = models.FloatField(blank=True)
     data_pagamento = models.DateTimeField()
     venda = models.ForeignKey(Venda, on_delete=models.CASCADE)
     tipo_pag = models.ForeignKey(TipoPagamento, on_delete=models.CASCADE)
