@@ -56,7 +56,10 @@ class Pagamento(models.Model):
     tipo_pag = models.ForeignKey(TipoPagamento, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f"Venda concluida no valor de R${self.valor}"
+        # Verifica se ainda há saldo pendente
+        if self.saldo > 0:
+            return f"Venda Pendente, Valor restante para ser aprovada: R${self.saldo:.2f}"
+        return f"Venda concluída no valor de R${self.valor:.2f}"
 
     class Meta:
         verbose_name='Pagamento'

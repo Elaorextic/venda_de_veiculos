@@ -7,8 +7,12 @@ class VendaAdmin(admin.ModelAdmin):
 class PagamentoAdmin(admin.ModelAdmin):
     readonly_fields = ('saldo',)
     def save_model(self, request, obj, form, change):
-        # Atualiza o status da venda
-        venda = Venda.objects.get(id=obj.venda.id)
+        venda = obj.venda
+
+        # Calcular o total já pago antes desse pagamento
+        total_pago = sum(pag.valor for pag in Pagamento.objects.filter(venda=venda))
+        # Calcular o novo saldo considerando este pagamento
+        saldo_atualizado = venda.veiculo.preco - (total_pago + obj.valor)
 
 
 
@@ -20,28 +24,26 @@ class PagamentoAdmin(admin.ModelAdmin):
             messages.error(request, "ERRO, Esse pagamento já está aprovado!")
             return
 
-        if venda.status == 'Pendente':
+        if saldo_atualizado == 0:  # Pagamento total concluído
+            venda.status = 'Aprovada'
+            venda.save()
+            obj.saldo = saldo_atualizado  # Atualiza saldo
+            super().save_model(request, obj, form, change)
+            messages.success(request, f"Pagamento completo! A venda foi aprovada.")
+
+        elif saldo_atualizado > 0:  # Pagamento Parcelado
+            venda.status = 'Pendente'
+            venda.save()
+            obj.saldo = saldo_atualizado  # Atualiza saldo
+            super().save_model(request, obj, form, change)
+            messages.set_level(request, messages.WARNING)
+            messages.warning(request, f"Pagamento parcial! Ainda falta pagar R${saldo_atualizado:.2f}.")
 
 
-            if obj.valor == obj.venda.veiculo.preco: # Ver se o valor e igual ao valor do veiculo
-                venda.status = 'Aprovada'
-                venda.save()
-                # Registrar o status
-                super().save_model(request, obj, form, change)
-
-            elif obj.venda.veiculo.preco > obj.valor: # Ver se o valor do veiculo e maior do que o pagamento
-                venda.status = 'Pendente'
-                venda.save()
-                #Registrar o status Novamente
-                super().save_model(request, obj, form, change)
-                messages.set_level(request, messages.INFO)
-                messages.info(request, f"Seu pagamento não foi totalmente concluido, ainda esta pendente o valor de {obj.saldo} ")
-
-
-            elif obj.valor > obj.venda.veiculo.preco: # Ver se o valor do pagamento e maior do que o do veiculo
-                messages.set_level(request, messages.ERROR)
-                messages.error(request, "ERRO, Esse pagamento esta acima do valor da venda!")
-                return
+        elif obj.valor > obj.venda.veiculo.preco: # Ver se o valor do pagamento e maior do que o do veiculo
+            messages.set_level(request, messages.ERROR)
+            messages.error(request, "ERRO, Esse pagamento esta acima do valor da venda!")
+            return
 
 
 
